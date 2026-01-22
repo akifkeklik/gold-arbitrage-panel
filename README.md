@@ -1,8 +1,8 @@
-# Gold Arbitrage Panel
+# 🪙 Gold Arbitrage Panel
 
 **Gold Arbitrage Panel** is a comprehensive financial analysis tool designed to track real-time gold prices and identify arbitrage opportunities across different markets.
 
-This Python-based application specifically focuses on comparing **Gold Certificates** (Sertifika) against **Physical Gold** and other variations, calculating the spread to help users make informed investment decisions. It features a fully mobile-responsive interface for monitoring markets on the go.
+This Python-based application specifically focuses on comparing **Gold Certificates** (Sertifika) against **Physical Gold** and other variations, calculating the spread to help users make informed investment decisions. It features a fully mobile-responsive interface built with **Streamlit**.
 
 ## 🚀 Key Features
 
@@ -10,7 +10,6 @@ This Python-based application specifically focuses on comparing **Gold Certifica
 * **Arbitrage Analysis:** Automatically calculates the spread between Buying and Selling prices to highlight profitable gaps.
 * **Asset Comparison:** Detailed comparison between **Gold Certificates**, **Physical Gold**, and **Bank Rates**.
 * **Mobile-Ready Interface:** Optimized UI for seamless usage on both desktop and mobile devices.
-* **Instant Alerts:** (Optional) Visual indicators for high-margin opportunities.
 
 ## 🛠️ Installation & Usage
 
@@ -25,9 +24,12 @@ cd gold-arbitrage-panel
 pip install -r requirements.txt
 
 # 3. Run the application
-python app.py
+streamlit run app.py
+Note: The application will automatically open in your default web browser at http://localhost:8501.
 
 📂 Project Structure
-app.py: The main application entry point and user interface logic.
+app.py: The main application entry point and user interface logic (Streamlit).
+
 services.py: Backend services responsible for data scraping, API handling, and arbitrage calculations.
+
 requirements.txt: List of all Python dependencies required to run the project.
