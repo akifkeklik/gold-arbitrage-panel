@@ -1,4 +1,4 @@
-# 🪙 Gold Arbitrage Panel
+# Gold Arbitrage Panel
 
 **Gold Arbitrage Panel** is a comprehensive financial analysis tool designed to track real-time gold prices and identify arbitrage opportunities across different markets.
 
