@@ -46,74 +46,67 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 3. GERÇEK VERİ MOTORU (SİMÜLASYON YOK!)
+# 3. GERÇEK VERİ MOTORU (7/24 ÇALIŞAN VERSİYON)
 # ==========================================
 
 @st.cache_data(ttl=60, show_spinner=False)
 def get_real_market_data(period_selection):
-    # Yahoo Finance Sembolleri (Global ve Yerel)
-    # GC=F: Altın Ons Vadeli (Global)
-    # TRY=X: USD/TRY Kuru
-    # ALTIN.IS: Darphane Altın Sertifikası (BIST)
+    # Yahoo Finance Sembolleri
+    tickers = "GC=F TRY=X ALTIN.IS"
     
-    period_map = {"1S": "1d", "24S": "5d", "1H": "1mo", "1A": "3mo", "3A": "1y", "1Y": "2y"}
-    interval_map = {"1S": "5m", "24S": "30m", "1H": "60m", "1A": "1d", "3A": "1d", "1Y": "1d"}
+    period_map = {"1S": "5d", "24S": "5d", "1H": "1mo", "1A": "3mo", "3A": "1y", "1Y": "2y"}
+    interval_map = {"1S": "15m", "24S": "30m", "1H": "60m", "1A": "1d", "3A": "1d", "1Y": "1d"}
     
     p = period_map.get(period_selection, "5d")
-    i = interval_map.get(period_selection, "30m")
+    i = interval_map.get(period_selection, "15m")
 
     try:
-        # 1. Verileri İndir (Çoklu Ticker)
-        tickers = "GC=F TRY=X ALTIN.IS"
+        # Verileri indir
         data = yf.download(tickers, period=p, interval=i, group_by='ticker', progress=False)
 
-        # 2. Verileri Ayrıştır
-        # Yahoo Finance bazen MultiIndex döndürür, onu çözüyoruz:
-        
-        # ONS ALTIN (USD)
+        # Sütunları ayıkla
         df_ons = data['GC=F']['Close'] if 'GC=F' in data else pd.Series()
-        
-        # DOLAR KURU (TRY)
         df_usd = data['TRY=X']['Close'] if 'TRY=X' in data else pd.Series()
-        
-        # SERTİFİKA (TL)
         df_sertifika = data['ALTIN.IS']['Close'] if 'ALTIN.IS' in data else pd.Series()
 
-        # Veri Birleştirme (Zaman indeksine göre eşleşir)
+        # --- KRİTİK DÜZELTME: VERİLERİ BİRLEŞTİR VE DOLDUR ---
         df = pd.DataFrame({
             'Ons': df_ons,
             'Dolar': df_usd,
             'Sertifika_Ham': df_sertifika
-        }).dropna()
+        })
+
+        # Gece veya hafta sonu veri eksikse, en son bilinen fiyatı kullan (Forward Fill)
+        # Bu sayede gece 3'te bile grafik boş kalmaz.
+        df = df.ffill().dropna()
 
         if df.empty:
-            st.error("Piyasa verileri şu an kapalı veya çekilemiyor. (Hafta sonu veya borsa kapanışı)")
-            return pd.DataFrame() # Boş dön
+            return pd.DataFrame()
 
-        # 3. HESAPLAMA (FİNANS MATEMATİĞİ)
-        # 1 Ons = 31.1035 Gram
-        # Fiziki (Has) Altın TL = (Ons Dolar * Dolar Kuru) / 31.1035
-        
+        # HESAPLAMALAR
+        # 1. Has Altın TL (Teorik)
         df['Fiziki'] = (df['Ons'] * df['Dolar']) / 31.1035
         
-        # Sertifika (Borsada 0.01g olarak işlem görür, o yüzden 100 ile çarpıp grama çeviriyoruz)
-        # Not: Bazı dönemlerde Yahoo verisi zaten düzeltilmiş gelir, kontrol edelim.
-        # Genelde ALTIN.IS 20-25 TL bandındadır (2024 sonu). 
-        # Eğer veri 2000'lerde geliyorsa zaten gramdır. 20'lerde geliyorsa 100 ile çarparız.
-        
+        # 2. Sertifika (Gram Dönüşümü)
+        # BIST verisi bazen kuruş bazen TL gelir, bunu düzelt:
         last_val = df['Sertifika_Ham'].iloc[-1]
-        if last_val < 500: # Muhtemelen 0.01g fiyatı
+        if last_val < 500: 
             df['Sertifika'] = df['Sertifika_Ham'] * 100
         else:
             df['Sertifika'] = df['Sertifika_Ham']
 
-        # Makas Hesabı
         df['Makas'] = df['Fiziki'] - df['Sertifika']
         
+        # Seçilen zaman dilimine göre kes (Slice)
+        if period_selection == "1S":
+            df = df.tail(96) # Son 24 saat (15dk * 4 * 24)
+        elif period_selection == "24S":
+            df = df.tail(48) 
+
         return df
 
     except Exception as e:
-        st.error(f"Veri hatası: {e}")
+        print(f"Hata: {e}")
         return pd.DataFrame()
 
 # ==========================================
@@ -148,7 +141,7 @@ if not df.empty:
 
     st.markdown("---")
 
-    # Grafik Ayarları
+    # Grafik Ayarları (Auto Zoom)
     y_min = min(df['Sertifika'].min(), df['Fiziki'].min())
     y_max = max(df['Sertifika'].max(), df['Fiziki'].max())
     padding = (y_max - y_min) * 0.1
@@ -191,6 +184,7 @@ if not df.empty:
     st.plotly_chart(fig_spread, use_container_width=True)
 
 else:
-    st.warning("Veriler yükleniyor veya piyasa kapalı...")
+    # Veri yine boş gelirse diye yedek mesaj
+    st.info("Piyasa verileri yükleniyor... Eğer bu mesaj gitmiyorsa piyasalar kapalı olabilir (02:00 - 09:00 arası veri akışı yavaştır).")
     
 st.markdown(f"<div style='text-align: right; color: #484F58; font-size: 11px; margin-top: 10px;'>Kaynak: Yahoo Finance (Live) | Hesaplama: (Ons x Dolar)/31.1</div>", unsafe_allow_html=True)
