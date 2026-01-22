@@ -20,18 +20,24 @@ st.set_page_config(
 st_autorefresh(interval=60 * 1000, key="sys_refresh")
 
 # ==========================================
-# 2. PREMIUM CSS (TASARIM)
+# 2. PREMIUM CSS (COMPACT DASHBOARD STYLE)
 # ==========================================
 st.markdown("""
 <style>
     .stApp { background-color: #0E1117; }
     header {visibility: hidden;}
     
+    /* Üst boşluğu alıp sayfayı yukarı itiyoruz (Compact Mode) */
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 0rem !important;
+    }
+
     div[data-testid="stMetric"] {
         background-color: #161B22;
         border: 1px solid #30363D;
         border-radius: 8px;
-        padding: 15px 20px;
+        padding: 10px 15px; /* Padding küçültüldü */
         box-shadow: 0 1px 3px rgba(0,0,0,0.3);
     }
     
@@ -41,13 +47,14 @@ st.markdown("""
     
     [data-testid="stMetricValue"] {
         font-family: 'Inter', sans-serif;
-        font-size: 28px !important;
+        font-size: 24px !important; /* Font bir tık küçüldü */
         font-weight: 600 !important;
         color: #F0F6FC !important;
     }
     
     [data-testid="stMetricLabel"] {
         color: #8B949E !important;
+        font-size: 13px !important;
     }
 
     .stRadio > div {
@@ -57,15 +64,18 @@ st.markdown("""
     
     .stRadio label {
         color: #C9D1D9 !important;
+        font-size: 12px !important;
     }
     
-    .main-header { font-family: 'Inter', sans-serif; font-weight: 700; color: #F0F6FC; margin-bottom: 0px; }
-    .sub-header { font-family: 'Inter', sans-serif; color: #8B949E; font-size: 14px; margin-top: -5px; margin-bottom: 20px; }
+    .main-header { font-family: 'Inter', sans-serif; font-weight: 700; color: #F0F6FC; font-size: 22px; margin-bottom: 0px; }
+    .sub-header { font-family: 'Inter', sans-serif; color: #8B949E; font-size: 12px; margin-top: -5px; margin-bottom: 10px; }
+    
+    hr { margin-top: 0.5rem; margin-bottom: 0.5rem; }
 </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 3. VERİ MOTORU
+# 3. VERİ MOTORU (DOKUNULMADI - AYNI KALDI)
 # ==========================================
 
 def get_simulated_data(minutes, label):
@@ -139,10 +149,10 @@ def fetch_enterprise_data(selection):
         return get_simulated_data(m, selection)
 
 # ==========================================
-# 4. ARAYÜZ (UI)
+# 4. ARAYÜZ (UI - COMPACT MODE)
 # ==========================================
 
-col_logo, col_title, col_time = st.columns([1, 6, 3])
+col_logo, col_title, col_time = st.columns([0.1, 6, 3])
 
 with col_title:
     st.markdown("<h2 class='main-header'>Altın Arbitraj Paneli</h2>", unsafe_allow_html=True)
@@ -167,38 +177,39 @@ with c3: st.metric("Makas (Spread)", f"{curr['spread']:.2f} ₺", f"{spread_delt
 
 st.markdown("---")
 
-# --- GRAFİK AYARLARI (ZOOM FIX) ---
-# Burası grafiğin 0'dan başlamamasını, veriye odaklanmasını sağlar.
+# --- GRAFİK AYARLARI (DYNAMIC ZOOM & COMPACT SIZE) ---
+# Zoom (Ölçek) hesaplaması aynı kaldı, sadece grafik boyutları küçüldü.
+
 y_min = min(df['x'].min(), df['physical'].min())
 y_max = max(df['x'].max(), df['physical'].max())
-padding = (y_max - y_min) * 0.1 # %10 boşluk bırak
+padding = (y_max - y_min) * 0.1
 y_range = [y_min - padding, y_max + padding]
 
-# Grafik 1: Fiyatlar
+# Grafik 1: Fiyatlar (Compact)
 fig_price = go.Figure()
 fig_price.add_trace(go.Scatter(x=df.index, y=df['x'], mode='lines', name='Sertifika (X)', line=dict(color='#2f81f7', width=2), fill='tozeroy', fillcolor='rgba(47, 129, 247, 0.05)'))
 fig_price.add_trace(go.Scatter(x=df.index, y=df['physical'], mode='lines', name='Fiziki Piyasa', line=dict(color='#D29922', width=2)))
 
 fig_price.update_layout(
-    title=dict(text="Fiyat Trendi", font=dict(size=18, color='#F0F6FC')),
+    title=dict(text="Fiyat Trendi", font=dict(size=14, color='#F0F6FC')), # Başlık küçüldü
     template="plotly_dark",
     paper_bgcolor='rgba(0,0,0,0)',
     plot_bgcolor='rgba(0,0,0,0)',
-    height=420,
-    margin=dict(t=50, b=20, l=0, r=0),
+    height=320, # <--- 420px yerine 320px (Yer kazanmak için)
+    margin=dict(t=30, b=10, l=0, r=0), # Kenar boşlukları alındı
     xaxis=dict(showgrid=False, color='#484F58'),
     yaxis=dict(
         showgrid=True, 
         gridcolor='#21262D', 
         color='#8B949E',
-        range=y_range  # <--- İŞTE BU AYAR GRAFİĞİ CANLANDIRIR (ZOOM YAPAR)
+        range=y_range 
     ),
     hovermode="x unified",
-    legend=dict(orientation="h", y=1.05, x=0, font=dict(color='#C9D1D9'))
+    legend=dict(orientation="h", y=1.1, x=0, font=dict(color='#C9D1D9', size=10))
 )
 st.plotly_chart(fig_price, use_container_width=True)
 
-# Grafik 2: Makas (Spread) Zoom Ayarı
+# Grafik 2: Makas (Ultra Compact)
 s_min = df['spread'].min()
 s_max = df['spread'].max()
 s_pad = (s_max - s_min) * 0.1
@@ -208,21 +219,21 @@ fig_spread = go.Figure()
 fig_spread.add_trace(go.Scatter(x=df.index, y=df['spread'], mode='lines', name='Spread', line=dict(color='#F85149', width=1.5), fill='tozeroy', fillcolor='rgba(248, 81, 73, 0.1)'))
 
 fig_spread.update_layout(
-    title=dict(text="Makas Analizi (Spread)", font=dict(size=16, color='#F0F6FC')),
+    title=dict(text="Makas Analizi", font=dict(size=14, color='#F0F6FC')),
     template="plotly_dark",
     paper_bgcolor='rgba(0,0,0,0)',
     plot_bgcolor='rgba(0,0,0,0)',
-    height=300,
-    margin=dict(t=50, b=20, l=0, r=0),
+    height=200, # <--- 300px yerine 200px (Alt panel olduğu için daha küçük)
+    margin=dict(t=30, b=10, l=0, r=0),
     xaxis=dict(showgrid=False, color='#484F58'),
     yaxis=dict(
         showgrid=True, 
         gridcolor='#21262D', 
         color='#8B949E',
-        range=s_range # <--- MAKAS GRAFİĞİ İÇİN ZOOM
+        range=s_range
     ),
     hovermode="x unified"
 )
 st.plotly_chart(fig_spread, use_container_width=True)
 
-st.markdown(f"<div style='text-align: right; color: #484F58; font-size: 12px; margin-top: 20px;'>Sistem Durumu: ● Çevrimiçi | Son Güncelleme: {datetime.now().strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
+st.markdown(f"<div style='text-align: right; color: #484F58; font-size: 11px; margin-top: 10px;'>Sistem Durumu: ● Çevrimiçi | Son Güncelleme: {datetime.now().strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
